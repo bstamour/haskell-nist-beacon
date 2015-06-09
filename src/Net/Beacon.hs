@@ -1,54 +1,69 @@
-module Net.Beacon where
+{- | Module for interacting with the NIST Randomness Beacon (prototype)
+     web API. The functions exported from this module return 512-bit
+     full-entropy ByteStrings that you can use for whatever you want.
+     New values are computed every 60 seconds on the NIST server.
+
+     For more information, see the project homepage:
+
+         https://beacon.nist.gov/home
+-}
+
+module Net.Beacon
+       ( getLastRecord
+       , getCurrentRecord
+       , getPreviousRecord
+       , getNextRecord
+       , getStartChainRecord
+       ) where
 
 import Control.Monad
 import Data.Time.Clock.POSIX
+import Text.XML.Light.Input
+import Text.XML.Light.Proc
+import Text.XML.Light.Types
 import Network.HTTP (getResponseBody, simpleHTTP, getRequest)
+
+import qualified Data.ByteString.Lazy.Char8 as B
 
 timestamp :: IO Int
 timestamp = fmap round getPOSIXTime
 
-getXmlData :: String -> IO String
+getXmlData :: String -> IO B.ByteString
 getXmlData url = do
   body <- getResponseBody <=< simpleHTTP $ getRequest url
-  return body
+  return $ B.pack body
 
-{- For a better description, see
-   https://beacon.nist.gov/home
+getOutputValue :: B.ByteString -> Maybe String
+getOutputValue stuff = do
+  x <- parseXMLDoc stuff
+  c <- findChild (QName "outputValue" Nothing Nothing) x
+  return $ strContent c
 
-   Current (or next closest) record
-   https://beacon.nist.gov/rest/record/<unix time stamp>
+getLastRecord :: IO (Maybe B.ByteString)
+getLastRecord = do
+  x <- getXmlData "http://beacon.nist.gov/rest/record/last"
+  return $ B.pack <$> getOutputValue x
 
-   Previous record
-   https://beacon.nist.gov/rest/record/previous/<unix time stamp>
-
-   Next record
-   https://beacon.nist.gov/rest/record/next/<unix time stamp>
-
-   Last record
-   https://beacon.nist.gov/rest/record/last
-
-   Start chain record
-   https://beacon.nist.gov/rest/record/start-chain/<unix time stamp> -}
-
-getLastRecord :: IO String
-getLastRecord = getXmlData "http://beacon.nist.gov/rest/record/last"
-
-getCurrentRecord :: IO String
+getCurrentRecord :: IO (Maybe B.ByteString)
 getCurrentRecord = do
   ts <- timestamp
-  getXmlData $ "http://beacon.nist.gov/rest/record/" ++ (show ts)
+  x <- getXmlData $ "http://beacon.nist.gov/rest/record/" ++ (show ts)
+  return $ B.pack <$> getOutputValue x
 
-getPreviousRecord :: IO String
+getPreviousRecord :: IO (Maybe B.ByteString)
 getPreviousRecord = do
   ts <- timestamp
-  getXmlData $ "http://beacon.nist.gov/rest/record/previous/" ++ (show ts)
+  x <- getXmlData $ "http://beacon.nist.gov/rest/record/previous/" ++ (show ts)
+  return $ B.pack <$> getOutputValue x
 
-getNextRecord :: IO String
+getNextRecord :: IO (Maybe B.ByteString)
 getNextRecord = do
   ts <- timestamp
-  getXmlData $ "http://beacon.nist.gov/rest/record/next/" ++ (show ts)
+  x <- getXmlData $ "http://beacon.nist.gov/rest/record/next/" ++ (show ts)
+  return $ B.pack <$> getOutputValue x
 
-getStartChainRecord :: IO String
+getStartChainRecord :: IO (Maybe B.ByteString)
 getStartChainRecord = do
   ts <- timestamp
-  getXmlData $ "http://beacon.nist.gov/rest/record/start-chain/" ++ (show ts)
+  x <- getXmlData $ "http://beacon.nist.gov/rest/record/start-chain/" ++ (show ts)
+  return $ B.pack <$> getOutputValue x
