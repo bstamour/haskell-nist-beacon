@@ -21,7 +21,8 @@ For more information about the project, see
 module Net.Beacon
        ( Timestamp
        , Record()
-       , interval
+       , version
+       , frequency
        , timeStamp
        , seedValue
        , previousOutputValue
@@ -50,8 +51,11 @@ import qualified Data.ByteString.Lazy.Char8 as B
 -- | A single record: the random data plus some additional information.
 data Record =
   Record
-  { -- | The time interval, in seconds, between expected records.
-    interval :: Int
+  { -- | A simple version string, e.g. "0.1.0".
+    version :: String
+
+    -- | The time interval, in seconds, between expected records.
+  , frequency :: Int
 
     -- | The time the seed value was generated as the number of seconds since
     --   January 1, 1970.
@@ -133,7 +137,8 @@ getRecord stuff = do
   xml <- parseXMLDoc stuff
   let fc = findChild' xml
   Record
-    <$> (read   <$> fc "frequency")
+    <$>             fc "version"
+    <*> (read   <$> fc "frequency")
     <*> (read   <$> fc "timeStamp")
     <*> (B.pack <$> fc "seedValue")
     <*> (B.pack <$> fc "previousOutputValue")
