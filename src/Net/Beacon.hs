@@ -7,7 +7,7 @@ Maintainer  : bryan@bryanstamour.com
 Stability   : experimental
 Portability : POSIX
 
-This moduleis for interacting with the NIST Randomness Beacon (prototype)
+This module is for interacting with the NIST Randomness Beacon (prototype)
 web API. The Randomness Beacon is designed to be a public source of random
 information. It generates and publishes 512-bit blocks of random data collected
 from a quantum mechanical process every 60 seconds.
