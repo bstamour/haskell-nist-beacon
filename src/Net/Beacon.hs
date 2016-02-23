@@ -43,9 +43,8 @@ import Text.XML.Light.Input
 import Text.XML.Light.Proc
 import Text.XML.Light.Types
 
-import Network.HTTP (getResponseBody, simpleHTTP, getRequest)
-
 import qualified Data.ByteString.Lazy.Char8 as B
+import Network.HTTP.Conduit (simpleHttp)
 
 
 -- | A single record: the random data plus some additional information.
@@ -94,42 +93,36 @@ type Timestamp = Int
 -- | Last record published.
 getLastRecord :: IO (Maybe Record)
 getLastRecord = do
-  x <- getXmlData "http://beacon.nist.gov/rest/record/last"
+  x <- simpleHttp "https://beacon.nist.gov/rest/record/last"
   return $ getRecord x
 
 
 -- | Current record, or closest to the timestamp.
 getCurrentRecord :: Timestamp -> IO (Maybe Record)
 getCurrentRecord ts = do
-  x <- getXmlData $ "http://beacon.nist.gov/rest/record/" ++ (show ts)
+  x <- simpleHttp $ "http://beacon.nist.gov/rest/record/" ++ (show ts)
   return $ getRecord x
 
 
 -- | Previous record.
 getPreviousRecord :: Timestamp -> IO (Maybe Record)
 getPreviousRecord ts = do
-  x <- getXmlData $ "http://beacon.nist.gov/rest/record/previous/" ++ (show ts)
+  x <- simpleHttp $ "https://beacon.nist.gov/rest/record/previous/" ++ (show ts)
   return $ getRecord x
 
 
 -- | Next record.
 getNextRecord :: Timestamp -> IO (Maybe Record)
 getNextRecord ts = do
-  x <- getXmlData $ "http://beacon.nist.gov/rest/record/next/" ++ (show ts)
+  x <- simpleHttp $ "https://beacon.nist.gov/rest/record/next/" ++ (show ts)
   return $ getRecord x
 
 
 -- | Start chain record.
 getStartChainRecord :: Timestamp -> IO (Maybe Record)
 getStartChainRecord ts = do
-  x <- getXmlData $ "http://beacon.nist.gov/rest/record/start-chain/" ++ (show ts)
+  x <- simpleHttp $ "https://beacon.nist.gov/rest/record/start-chain/" ++ (show ts)
   return $ getRecord x
-
-
-getXmlData :: String -> IO B.ByteString
-getXmlData url = do
-  body <- getResponseBody <=< simpleHTTP $ getRequest url
-  return $ B.pack body
 
 
 getRecord :: B.ByteString -> Maybe Record
@@ -146,4 +139,4 @@ getRecord stuff = do
     <*> (B.pack <$> fc "outputValue")
     <*> (read   <$> fc "statusCode")
   where
-    findChild' xml name = strContent <$> findChild (QName name Nothing Nothing) xml
+    findChild' xml name = strContent <$> findChild (QName name (Just "http://beacon.nist.gov/record/0.1/") Nothing) xml
