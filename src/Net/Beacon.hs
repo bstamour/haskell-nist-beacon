@@ -139,7 +139,7 @@ getRecord stuff = do
     <*> (hexToBS <$> fc "outputValue")
     <*> (read    <$> fc "statusCode")
   where
-    findChild' xml name = strContent <$> findChild (QName name (Just "http://beacon.nist.gov/record/0.1/") Nothing) xml
+    findChild' xml name = strContent <$> filterChildName ((name ==) . qName) xml
 
 -- input: even-length string of hex characters
 -- output: bytestring packed with the hex bits
