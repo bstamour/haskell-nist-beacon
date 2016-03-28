@@ -29,6 +29,8 @@ module Net.Beacon
        , signatureValue
        , outputValue
        , statusCode
+       , toXML
+       , fromXML
        , getLastRecord
        , getCurrentRecord
        , getPreviousRecord
@@ -84,49 +86,53 @@ data Record =
     --     2 - Time between values is greater than the frequency, but the
     --         chain is still intact
   , statusCode :: Int
+
+    -- | The original XML file.
+  , xmlFile :: B.ByteString
   } deriving (Show, Eq)
 
 
 type Timestamp = Int
 
-
 -- | Last record published.
 getLastRecord :: IO (Maybe Record)
 getLastRecord = do
   x <- simpleHttp "https://beacon.nist.gov/rest/record/last"
-  return $ getRecord x
+  return $ fromXML x
 
 
 -- | Current record, or closest to the timestamp.
 getCurrentRecord :: Timestamp -> IO (Maybe Record)
 getCurrentRecord ts = do
   x <- simpleHttp $ "http://beacon.nist.gov/rest/record/" ++ (show ts)
-  return $ getRecord x
+  return $ fromXML x
 
 
 -- | Previous record.
 getPreviousRecord :: Timestamp -> IO (Maybe Record)
 getPreviousRecord ts = do
   x <- simpleHttp $ "https://beacon.nist.gov/rest/record/previous/" ++ (show ts)
-  return $ getRecord x
+  return $ fromXML x
 
 
 -- | Next record.
 getNextRecord :: Timestamp -> IO (Maybe Record)
 getNextRecord ts = do
   x <- simpleHttp $ "https://beacon.nist.gov/rest/record/next/" ++ (show ts)
-  return $ getRecord x
+  return $ fromXML x
 
 
 -- | Start chain record.
 getStartChainRecord :: Timestamp -> IO (Maybe Record)
 getStartChainRecord ts = do
   x <- simpleHttp $ "https://beacon.nist.gov/rest/record/start-chain/" ++ (show ts)
-  return $ getRecord x
+  return $ fromXML x
 
+toXML :: Record -> B.ByteString
+toXML = xmlFile
 
-getRecord :: B.ByteString -> Maybe Record
-getRecord stuff = do
+fromXML :: B.ByteString -> Maybe Record
+fromXML stuff = do
   xml <- parseXMLDoc stuff
   let fc = findChild' xml
   Record
@@ -138,6 +144,7 @@ getRecord stuff = do
     <*> (hexToBS <$> fc "signatureValue")
     <*> (hexToBS <$> fc "outputValue")
     <*> (read    <$> fc "statusCode")
+    <*> (Just stuff)
   where
     findChild' xml name = strContent <$> filterChildName ((name ==) . qName) xml
 
