@@ -44,7 +44,6 @@ import Text.XML.Light.Proc
 import Text.XML.Light.Types
 
 import qualified Data.ByteString.Lazy as B
-import Data.ByteString.Char8 (pack, unpack)
 import Network.HTTP.Conduit (simpleHttp)
 import Numeric
 
@@ -85,18 +84,8 @@ data Record =
     --     2 - Time between values is greater than the frequency, but the
     --         chain is still intact
   , statusCode :: Int
+  } deriving (Show, Eq)
 
-    -- | The original XML file.
-  , xmlFile :: B.ByteString
-  } deriving (Eq)
-
-instance Show Record where
-  show = unpack . B.toStrict . xmlFile
-
-instance Read Record where
-  readsPrec n s = case getRecord $ B.fromStrict $ pack s of
-    Nothing -> [(error "Parse error while reading NIST Beacon XML file.","")]
-    (Just r) -> [(r,"")]
 
 type Timestamp = Int
 
@@ -149,7 +138,6 @@ getRecord stuff = do
     <*> (hexToBS <$> fc "signatureValue")
     <*> (hexToBS <$> fc "outputValue")
     <*> (read    <$> fc "statusCode")
-    <*> Just stuff
   where
     findChild' xml name = strContent <$> filterChildName ((name ==) . qName) xml
 
