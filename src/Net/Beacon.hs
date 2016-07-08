@@ -40,6 +40,7 @@ module Net.Beacon
 
 
 import Control.Monad
+import Control.Monad.IO.Class
 
 import Text.XML.Light.Input
 import Text.XML.Light.Proc
@@ -95,35 +96,35 @@ data Record =
 type Timestamp = Int
 
 -- | Last record published.
-getLastRecord :: IO (Maybe Record)
+getLastRecord :: MonadIO m => m (Maybe Record)
 getLastRecord = do
   x <- simpleHttp "https://beacon.nist.gov/rest/record/last"
   return $ fromXML x
 
 
 -- | Current record, or closest to the timestamp.
-getCurrentRecord :: Timestamp -> IO (Maybe Record)
+getCurrentRecord :: MonadIO m =>Timestamp -> m (Maybe Record)
 getCurrentRecord ts = do
   x <- simpleHttp $ "http://beacon.nist.gov/rest/record/" ++ (show ts)
   return $ fromXML x
 
 
 -- | Previous record.
-getPreviousRecord :: Timestamp -> IO (Maybe Record)
+getPreviousRecord :: MonadIO m => Timestamp -> m (Maybe Record)
 getPreviousRecord ts = do
   x <- simpleHttp $ "https://beacon.nist.gov/rest/record/previous/" ++ (show ts)
   return $ fromXML x
 
 
 -- | Next record.
-getNextRecord :: Timestamp -> IO (Maybe Record)
+getNextRecord :: MonadIO m => Timestamp -> m (Maybe Record)
 getNextRecord ts = do
   x <- simpleHttp $ "https://beacon.nist.gov/rest/record/next/" ++ (show ts)
   return $ fromXML x
 
 
 -- | Start chain record.
-getStartChainRecord :: Timestamp -> IO (Maybe Record)
+getStartChainRecord :: MonadIO m => Timestamp -> m (Maybe Record)
 getStartChainRecord ts = do
   x <- simpleHttp $ "https://beacon.nist.gov/rest/record/start-chain/" ++ (show ts)
   return $ fromXML x
@@ -151,9 +152,9 @@ fromXML stuff = do
 -- input: even-length string of hex characters
 -- output: bytestring packed with the hex bits
 -- e.g. B.unpack $ hexToBS "1011" = [16,17]
-hexToBS :: String -> B.ByteString 
+hexToBS :: String -> B.ByteString
 hexToBS = B.pack . go
-  where go (a:b:xs) = 
+  where go (a:b:xs) =
           let parses = readHex [a,b]
           in case parses of
               [(val,"")] -> val:(go xs)
